@@ -336,3 +336,418 @@ func readCookie(name string, r *http.Request) (value string, err error) {
 func NewApp(ctx context.Context, dbpool *pgxpool.Pool) *app {
 	return &app{ctx, repository.NewRepository(dbpool), make(map[string]repository.User)}
 }
+
+func (a app) Profil1(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userID := a.getCurrentUserID(r)
+	if userID == 0 {
+		http.Redirect(rw, r, "/login1", http.StatusSeeOther)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы users
+	user, err := a.repo.GetUserByID(a.ctx, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы user_info
+	userAbout, err := a.repo.GetAboutByID(a.ctx, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			// Если записи о пользователе в таблице user_info не существует, создаем пустую запись
+			err = a.repo.UpdateAbout(a.ctx, userID, "")
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			userAbout = "" // Присваиваем пустую строку, чтобы избежать ошибки отображения
+		} else {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Составление данных для передачи в шаблон
+	type ProfileData struct {
+		Name  string
+		Email string
+		About string
+	}
+
+	data := ProfileData{
+		Name:  user.Name,
+		Email: user.Email,
+		About: userAbout,
+	}
+
+	// Обработка POST-запроса для сохранения информации о пользователе
+	if r.Method == http.MethodPost {
+		// Получение нового значения поля "О себе" из тела запроса
+		type AboutRequest struct {
+			About string `json:"about"`
+		}
+
+		var aboutReq AboutRequest
+		if err := json.NewDecoder(r.Body).Decode(&aboutReq); err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Сохранение нового значения поля "О себе" в базе данных в таблице user_info
+		err := a.repo.UpdateAbout(a.ctx, userID, aboutReq.About)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновление данных о пользователе для отображения
+		data.About = aboutReq.About
+	}
+
+	// Парсинг шаблона и передача данных в него
+	lp := filepath.Join("public", "html", "profil1.html")
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "profil1", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a app) Profil2(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userID := a.getCurrentUserID(r)
+	if userID == 0 {
+		http.Redirect(rw, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы users
+	user, err := a.repo.GetUserByID(a.ctx, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы user_info
+	userAbout, err := a.repo.GetAboutByID(a.ctx, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			// Если записи о пользователе в таблице user_info не существует, создаем пустую запись
+			err = a.repo.UpdateAbout(a.ctx, userID, "")
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			userAbout = "" // Присваиваем пустую строку, чтобы избежать ошибки отображения
+		} else {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Составление данных для передачи в шаблон
+	type ProfileData struct {
+		Name  string
+		Email string
+		About string
+	}
+
+	data := ProfileData{
+		Name:  user.Name,
+		Email: user.Email,
+		About: userAbout,
+	}
+
+	// Обработка POST-запроса для сохранения информации о пользователе
+	if r.Method == http.MethodPost {
+		// Получение нового значения поля "О себе" из тела запроса
+		type AboutRequest struct {
+			About string `json:"about"`
+		}
+
+		var aboutReq AboutRequest
+		if err := json.NewDecoder(r.Body).Decode(&aboutReq); err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Сохранение нового значения поля "О себе" в базе данных в таблице user_info
+		err := a.repo.UpdateAbout(a.ctx, userID, aboutReq.About)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновление данных о пользователе для отображения
+		data.About = aboutReq.About
+	}
+
+	// Парсинг шаблона и передача данных в него
+	lp := filepath.Join("public", "html", "profil2.html")
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "profil2", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a app) Profil3(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userID := a.getCurrentUserID(r)
+	if userID == 0 {
+		http.Redirect(rw, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы users
+	user, err := a.repo.GetUserByID(a.ctx, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы user_info
+	userAbout, err := a.repo.GetAboutByID(a.ctx, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			// Если записи о пользователе в таблице user_info не существует, создаем пустую запись
+			err = a.repo.UpdateAbout(a.ctx, userID, "")
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			userAbout = "" // Присваиваем пустую строку, чтобы избежать ошибки отображения
+		} else {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Составление данных для передачи в шаблон
+	type ProfileData struct {
+		Name  string
+		Email string
+		About string
+	}
+
+	data := ProfileData{
+		Name:  user.Name,
+		Email: user.Email,
+		About: userAbout,
+	}
+
+	// Обработка POST-запроса для сохранения информации о пользователе
+	if r.Method == http.MethodPost {
+		// Получение нового значения поля "О себе" из тела запроса
+		type AboutRequest struct {
+			About string `json:"about"`
+		}
+
+		var aboutReq AboutRequest
+		if err := json.NewDecoder(r.Body).Decode(&aboutReq); err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Сохранение нового значения поля "О себе" в базе данных в таблице user_info
+		err := a.repo.UpdateAbout(a.ctx, userID, aboutReq.About)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновление данных о пользователе для отображения
+		data.About = aboutReq.About
+	}
+
+	// Парсинг шаблона и передача данных в него
+	lp := filepath.Join("public", "html", "profil3.html")
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "profil3", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a app) Profil4(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userID := a.getCurrentUserID(r)
+	if userID == 0 {
+		http.Redirect(rw, r, "/login4", http.StatusSeeOther)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы users
+	user, err := a.repo.GetUserByID(a.ctx, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы user_info
+	userAbout, err := a.repo.GetAboutByID(a.ctx, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			// Если записи о пользователе в таблице user_info не существует, создаем пустую запись
+			err = a.repo.UpdateAbout(a.ctx, userID, "")
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			userAbout = "" // Присваиваем пустую строку, чтобы избежать ошибки отображения
+		} else {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Составление данных для передачи в шаблон
+	type ProfileData struct {
+		Name  string
+		Email string
+		About string
+	}
+
+	data := ProfileData{
+		Name:  user.Name,
+		Email: user.Email,
+		About: userAbout,
+	}
+
+	// Обработка POST-запроса для сохранения информации о пользователе
+	if r.Method == http.MethodPost {
+		// Получение нового значения поля "О себе" из тела запроса
+		type AboutRequest struct {
+			About string `json:"about"`
+		}
+
+		var aboutReq AboutRequest
+		if err := json.NewDecoder(r.Body).Decode(&aboutReq); err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Сохранение нового значения поля "О себе" в базе данных в таблице user_info
+		err := a.repo.UpdateAbout(a.ctx, userID, aboutReq.About)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновление данных о пользователе для отображения
+		data.About = aboutReq.About
+	}
+
+	// Парсинг шаблона и передача данных в него
+	lp := filepath.Join("public", "html", "profil4.html")
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "profil4", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a app) Profil5(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userID := a.getCurrentUserID(r)
+	if userID == 0 {
+		http.Redirect(rw, r, "/login5", http.StatusSeeOther)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы users
+	user, err := a.repo.GetUserByID(a.ctx, userID)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение данных о пользователе из таблицы user_info
+	userAbout, err := a.repo.GetAboutByID(a.ctx, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			// Если записи о пользователе в таблице user_info не существует, создаем пустую запись
+			err = a.repo.UpdateAbout(a.ctx, userID, "")
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			userAbout = "" // Присваиваем пустую строку, чтобы избежать ошибки отображения
+		} else {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Составление данных для передачи в шаблон
+	type ProfileData struct {
+		Name  string
+		Email string
+		About string
+	}
+
+	data := ProfileData{
+		Name:  user.Name,
+		Email: user.Email,
+		About: userAbout,
+	}
+
+	// Обработка POST-запроса для сохранения информации о пользователе
+	if r.Method == http.MethodPost {
+		// Получение нового значения поля "О себе" из тела запроса
+		type AboutRequest struct {
+			About string `json:"about"`
+		}
+
+		var aboutReq AboutRequest
+		if err := json.NewDecoder(r.Body).Decode(&aboutReq); err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Сохранение нового значения поля "О себе" в базе данных в таблице user_info
+		err := a.repo.UpdateAbout(a.ctx, userID, aboutReq.About)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновление данных о пользователе для отображения
+		data.About = aboutReq.About
+	}
+
+	// Парсинг шаблона и передача данных в него
+	lp := filepath.Join("public", "html", "profil5.html")
+	tmpl, err := template.ParseFiles(lp)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "profil5", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
